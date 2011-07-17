@@ -37,14 +37,14 @@ class RBM:
     # Note that we keep the hidden units binary states, but leave the
     # visible units as real probabilities. See section 3 of Hinton's
     # "A Practical Guide to Training Restricted Boltzmann Machines"
-    # for more on why.        
+    # for more on why.
     for i in range(1, num_samples):
       visible = samples[i-1,:]
 
       # Calculate the activations of the hidden units.
       hidden_activations = np.dot(visible, self.weights)      
       # Calculate the probabilities of turning the hidden units on.
-      hidden_probs = logistic(hidden_activations)
+      hidden_probs = self._logistic(hidden_activations)
       # Turn the hidden units on with their specified probabilities.
       hidden_states = hidden_probs > np.random.rand(self.num_hidden + 1)
       # Always fix the hidden bias unit to 1.
@@ -52,7 +52,7 @@ class RBM:
 
       # Recalculate the probabilities that the visible units are on.
       visible_activations = np.dot(hidden_states, self.weights.T)
-      visible_probs = logistic(visible_activations)
+      visible_probs = self._logistic(visible_activations)
       samples[i,:] = visible_probs
 
     # Ignore the visible bias units (the first column), since they're always set to 1.
@@ -85,15 +85,17 @@ class RBM:
     # Calculate the activations of the hidden units.
     hidden_activations = np.dot(data, self.weights)
     # Calculate the probabilities of turning the hidden units on.
-    hidden_probs = logistic(hidden_activations)
+    hidden_probs = self._logistic(hidden_activations)
     # Turn the hidden units on with their specified probabilities.
     hidden_states[:,:] = hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
     # Always fix the hidden bias unit to 1.
-    hidden_states[:,0] = 1
+    # hidden_states[:,0] = 1
   
+    # Ignore the bias units.
+    hidden_states = hidden_states[:,1:]
     return hidden_states
 
-  def train(self, data, max_epochs = 50):
+  def train(self, data, max_epochs = 1000):
     """
     Train the machine.
     
@@ -113,28 +115,37 @@ class RBM:
       pos_hidden_activations = np.dot(data, self.weights)      
       pos_hidden_probs = self._logistic(pos_hidden_activations)
       pos_hidden_states = pos_hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
-      pos_products = np.dot(data.T, pos_hidden_probs)
+      # Note that we're using the activation *probabilities* of the hidden states, not the hidden states       
+      # themselves, when computing associations. We could also use the states; see section 3 of Hinton's 
+      # "A Practical Guide to Training Restricted Boltzmann Machines" for more.
+      pos_associations = np.dot(data.T, pos_hidden_probs)
 
-      # Reconstruct the visible units and sample again from the hidden units. 
+      # Reconstruct the visible units and sample again from the hidden units.
       # (This is the "negative CD phase", aka the daydreaming phase.)
       neg_visible_activations = np.dot(pos_hidden_states, self.weights.T)
       neg_visible_probs = self._logistic(neg_visible_activations)
       neg_visible_probs[:,0] = 1 # Fix the bias unit.
       neg_hidden_activations = np.dot(neg_visible_probs, self.weights)
       neg_hidden_probs = self._logistic(neg_hidden_activations)
-      neg_products = np.dot(neg_visible_probs.T, neg_hidden_probs)
+      # Note that we're using the activation *probabilities* when computing associations, not the states 
+      # themselves. We could also use the states; see section 3 of Hinton's "A Practical Guide to Training 
+      # Restricted Boltzmann Machines" for more.
+      neg_associations = np.dot(neg_visible_probs.T, neg_hidden_probs)
 
       # Update weights.
-      self.weights += self.learning_rate * ((pos_products - neg_products) / num_examples)
+      self.weights += self.learning_rate * ((pos_associations - neg_associations) / num_examples)
 
       error = np.sum((data - neg_visible_probs) ** 2)
       print "Epoch %s: error is %s\n" % (epoch, error)
       
   def _logistic(self, x):
-    return 1.0 / (1 + np.exp(-x))      
+    return 1.0 / (1 + np.exp(-x))
 
 if __name__ == '__main__':
   r = RBM(num_visible = 10, num_hidden = 2)
   data = np.array([[1,1,1,1,1,0,0,0,0,0],[0,0,1,0,0,1,1,1,1,0],[1,1,1,1,0,0,0,0,0,0],[0,0,1,0,0,0,1,1,1,0], [0,0,1,0,0,0,1,1,1,0],[1,1,1,1,1,0,0,0,0,0]])
   r.train(data, max_epochs = 1000)
   print r.weights
+  new_user_preferences = np.array([[0,0,0,0,0,1,1,1,1,0]])
+  new_user_hidden_states = r.run(new_user_preferences)
+  print new_user_hidden_states
