@@ -1,211 +1,94 @@
-(This is a rambly tutorial in progress.)
+# Introduction
 
-Suppose you have a set of movies, and you ask each of your friends whether they want to watch it (getting a binary yes/no answer). Let's see how we can use a Restricted Boltzmann Machine to learn latent movie groups that will help explain your friends' preferences.
+Suppose you ask a bunch of users to rate a set of movies on a 0-100 scale. In classical [factor analysis](http://en.wikipedia.org/wiki/Factor_analysis), you could then try to explain each movie and user in terms of a set of latent *factors*. For example, movies like Star Wars and Lord of the Rings might have strong associations with a latent science fiction and fantasy factor, and users who like Wall-E and Toy Story might have strong associations with a latent Pixar factor.
 
-# The Movie Setup
+Restricted Boltzmann Machines essentially perform a *binary* version of factor analysis. (This is one way of thinking about RBMs; there are, of course, others, and lots of different ways to use RBMs, but I'll adopt this approach for this post.) Instead of users rating a set of movies on a continuous scale, they simply tell you whether like a movie or not, and the RBM will try to discover latent factors that can explain the activation of these movie likes.
 
-To be concrete, let's use the following 10 movies in our set:
+More technically, a Restricted Boltzmann Machine is a **stochastic neural network** (neural network meaning we have neuron-like units whose binary activations depend on the neighbors they're connected to; stochastic meaning these activations have a probabilistic element) consisting of one layer of **visible units** (users' movie preferences whose states we know and set), one layer of **hidden units** (the latent factors we try to learn), and a bias unit (whose state is always on, and is a way of adjusting for the different inherent popularities of each movie). Furthermore, each visible unit is connected to all the hidden units (and this connection is undirected, so each hidden unit is also connected to all the visible units), and the bias unit is connected to both all the visible units and all the hidden units; to make learning easier, we restrict the network so that no visible unit is connected to any other and no hidden unit is connected to any other.
 
-* LOTR 1: The Fellowship of the Ring
-* LOTR 2: The Two Towers
-* LOTR 3: The Return of the King
-* Harry Potter and the Sorcerer's Stone
-* Twilight
-* Titanic
-* Gladiator
-* A Beautiful Mind
-* Slumdog Millionaire
-* Justin Bieber: Never Say Never
+For example, suppose we have users to tell us which of six movies they want to watch: Harry Potter, Avatar, LOTR 3, Gladiator, Titanic, and Glitter. If we want to learn two latent units underlying movie preferences -- for example, two natural groups in our set of six movies appear to be SF/fantasy (containing Harry Potter, Avatar, and LOTR 3) and Oscar winners (containing LOTR 3, Gladiator, and Titanic), so we might hope that our latent units will correspond to these categories -- then our RBM would look like the following:
 
-Notice that there are some natural groups behind the movies:
+[![RBM Example](http://dl.dropbox.com/u/10506/blog/rbms/rbm-example.png)](http://dl.dropbox.com/u/10506/blog/rbms/rbm-example.png)
 
-* **Science fiction and Fantasy** (LOTR 1-3, Harry Potter, Twilight)
-* **Oscar Best Picture Winners** (LOTR 3, Titanic, Gladiator, A Beautiful Mind, Slumdog Millionaire)
-* **Tween movies** (Harry Potter, Twilight, Justin Bieber)
-* **Russell Crowe movies** (Gladiator, A Beautiful Mind)
-* and so on.
+(Note the resemblance to a factor analysis graphical model.)
 
-Our goal is to discover clusters like these that can explain why your friends want to watch what they do.
+# State Activation
 
-# The User Setup
+Let's now talk about how the states of individual units change. Supposing we know the connection weights in our RBM (we'll explain how to learn these below), to update the state of unit $i$:
 
-Again, to be concrete, let's say your friends show the following preferences:
+* Compute the **activation energy** $a_i = \sum_j w_{ij} x_j$ of unit $i$, where the sum runs over all units $j$ that unit $i$ is connected to, $w_{ij}$ is the weight of the connection between $i$ and $j$, and $x_j$ is the 0 or 1 state of unit $j$. In other words, all of unit $i$'s neighbors send it a message, and we compute the sum of all these messages.
+* Let $p_i = \sigma(a_i)$, where $\sigma(x) = 1/(1 + exp(-x))$ is the logistic function.
+* We then turn unit $i$ on with probability $p_i$, and turn it off with probability $1 - p_i$.
 
-* Alice: loves science fiction and fantasy. She wants to watch LOTR 1-3, HP, and Twilight.
-* Bob: only watches critically acclaimed movies. He chooses all the Oscar winners.
-* Carol: loves SF&F, but refuses to watch Twilight. She chooses LOTR 1-3 and HP.
-* David: watches all the Oscar winners except Titanic.
-* Eve: is close friends with Alice, so she also chooses all the SF&F movies.
-* Fred: watches all the Oscar winners, plus Twilight because of his girlfriend.
+For example, let's suppose our two hidden units really do correspond to SF/fantasy and Oscar winners. 
 
-With this setup, let's now talk about how to stick movies and preferences into an RBM.
-
-# The Restricted Boltzmann Machine Setup
-
-A Restricted Boltzmann Machine is essentially a two-layer neural network. One layer consists of *visible* units (representing the movies a user wants to watch, in our example), each of which can be either in an active 1 state (meaning the user wants to watch it) or in an inactive 0 state (meaning the user does not want to watch it); the other layer consists of *hidden* units (latent groups underlying our movies), which again can be either in an active or inactive state. Since we want to be able to explain movie preferences in terms of these hidden groups, we connect each movie to all the hidden units. We also add one *bias* unit, whose state is always fixed at 1, and connect it to all the visible and all the hidden units.
-
-In our example, we have 10 visible units corresponding to movies, and let's say we have 2 hidden units that we'lll use to explain our friends' preferences. (In our example, our friends seemed to make their decisions based primarily on whether a movie was a SF&F movie or an Oscar winner, so we hope that these will be the two groups that we learn.)
-
-[![Movie RBM](http://dl.dropbox.com/u/10506/blog/rbms/movies-rbm.png)](http://dl.dropbox.com/u/10506/blog/rbms/movies-rbm.png)
-
-(Note, crucially, that none of the movies is connected to any other movie, and none of the hidden groups is connected to any other hidden group. This is why we call this network a *Restricted* Boltzmann Machine; this restriction is important because it makes learning much easier. If, instead, every unit were connected to every other, we would have a full Boltzmann Machine.)
-
-(Also, does the graphical model look like [anything else](http://en.wikipedia.org/wiki/Factor_analysis) to you? Another way of thinking about RBMs is to interpret them as performing binary factor analysis.)
-
-So what does this all mean? Suppose, for the moment, that we have assigned weights to all the edges: 
-
-* All the SF&F movies have a strong positive weight to the first hidden unit (which we can interpret as the "SF&F unit").
-* All the Oscar winners have a strong positive weight to the second hidden unit (which we can interpret as the "Oscar winners unit").
-* LOTR 3 has a strong positive weight to both units (since it's both SF&F and an Oscar winner).
-* Units that are relatively hard to turn on (e.g., relatively unpopular movies) are connected to the bias units with negative weights; units that are relatively easy to turn on (e.g., relatively popular movies) are connected to the bias units with positive weights.
-
-Thus, the network has a natural interpretation where hidden units explain why movie units are on.
-
-Now, given a user Jack's 10 movie preferences, let's see how we can use our RBM to model them.
-
-* First, set each movie unit to 1 or 0 depending on whether Jack wants to watch the movie or not. (For simplicity, I've dropped some of the movies in the pictures.)
-
-[![Movie RBM Initialized](http://dl.dropbox.com/u/10506/blog/rbms/movie-rbm-initialized.png)](http://dl.dropbox.com/u/10506/blog/rbms/movie-rbm-initialized.png)
-
-* Next, have all the (visible and bias) units send a message to the hidden units, where the message from unit $i$ to hidden unit $j$ is the product of $x_i$ ($i$'s state) and $w_{ij}$ (the weight of the edge between $i$ and $j$).
-
-[![Message to Hidden](http://dl.dropbox.com/u/10506/blog/rbms/message-to-hidden.png)](http://dl.dropbox.com/u/10506/blog/rbms/message-to-hidden.png)
-
-* For example, if the LOTR 1 unit is active, and it's connected to the SF&F unit with a weight of 0.95, it sends a message of $1 * 0.95$ to the SF&F unit.
-* Each hidden unit now computes the sum of all the messages it received. This is called the **activation energy**. If this sum is positive, the hidden unit turns on with high probability; otherwise, the hidden unit turns off with high probability. (More precisely, let $a_j = \sum w_{ij} x_i$ be the activation energy of the $j$th hidden unit, where the sum ranges over the visible units. Then we turn the $j$th hidden unit on with probability $\sigma(a_j)$, where $\sigma(x) = 1/(1 + exp(-x))$ is the logistic function.) We can interpret the new states of the hidden units as explanations for Jack's choices.
-
-[![Hidden Activation](http://dl.dropbox.com/u/10506/blog/rbms/hidden-activation.png)](http://dl.dropbox.com/u/10506/blog/rbms/hidden-activation.png)
-
-* Note that this updating rule makes sense: if Jack chooses to watch a lot of the SF&F movies, then since they're all connected to the SF&F unit with a large positive weight, they'll try to turn the unit on. Conversely, if Jack doesn't want to watch any of the SF&F movies, the SF&F unit will have a low activation energy, so it will probably remain off.
-* But note also that even if Jack chooses to watch a lot of the SF&F movies, so that the SF&F unit has a high activation energy, this doesn't guarantee that the SF&F unit will actually turn on, because of the randomness involved in activation. This makes a bit of sense: if Jack watches a lot of SF&F movies, then it's very likely that it's because he likes SF&F in general, but there's a small chance that he just happened to watch those movies for other reasons.
-* After updating our hidden units to their new states, we can also use the same process to update our visible units, to give us a **reconstruction** of our original data. We can interpret this as "correcting" Jack's original movie choices. For example, suppose Jack told us originally that he wanted to watch LOTR 1-3 and Twilight, but not Harry Potter. In setting the hidden units, it's likely the SF&F unit was turned on (since Jack told us he wanted to watch 4/5 of the SF&F movies), and so it will now try to turn the Harry Potter unit on in the reconstruction (which makes sense, since if Jack wants to watch LOTR 1-3 and Twilight, we might suspect he would want to watch Harry Potter as well).
-
-[![Reconstruction](http://dl.dropbox.com/u/10506/blog/rbms/reconstruction.png)](http://dl.dropbox.com/u/10506/blog/rbms/reconstruction.png)
-
-Now that we've seen a rough example of an RBM in action, let's talk about how to actually learn the edge weights in our network.
+* If Alice has told us her six binary preferences on our set of movies, we could then ask our RBM which of the hidden units her preferences turn on (i.e., ask the RBM to explain her preferences in terms of latent factors). (Note that even if Alice has declared she wants to watch Harry Potter, Avatar, and LOTR 3, this doesn't guarantee that the SF/fantasy hidden unit will turn on, but only that it will turn on with high *probability*. This makes a bit of sense: in the real world, Alice wanting to watch all three of those movies makes us highly suspect she likes SF/fantasy in general, but there's a small chance she wants to watch them for other reasons. Thus, the RBM allows us to *generate* models of people in the messy, real world.)
+* Conversely, if we know that one person likes SF/fantasy (so that the SF/fantasy unit is on), we can then ask the RBM which of the movie units that hidden unit activates (i.e., ask the RBM to generate a set of movie recommendations). (Again, note that the SF/fantasy being on doesn't guarantee that we'll always recommend all three of Harry Potter, Avatar, and LOTR 3 because, hey, not everyone who likes science fiction liked Avatar.)
 
 # Learning Weights
 
-Here's how we can use our training examples to learn the edge weights in our Restricted Boltzmann Machine. In each epoch, do the following:
+So how do we learn the connection weights in our network? Suppose we have a bunch of training examples, where each training example is a binary vector with six elements corresponding to a user's movie preferences. Then for each epoch, do the following:
 
-* Take a training example (a set of 10 movie preferences). Set the states of the visible units to these preferences.
-* Next, update the states of the hidden units: for the $j$th hidden unit, compute its activation energy $a_j = \sum_i w_{ij} x_i$ (where the summation runs over the the visible units and the bias unit, and $x_i$ is the binary state of the $i$th unit), and set $x_j$ to +1 with probability $\sigma(a_j)$ and to 0 with probability $1 - \sigma(a_j)$ (where $\sigma(\cdot)$ is the logistic function). Then for each edge $e_{ij}$, set $Positive(e_{ij}) = x_i * x_j$.
-* Now reconstruct the visible units in a similar manner: for each visible unit, compute its activation energy $a_i$, and update its state. Then update the hidden units again, and compute $Negative(e_{ij}) = x_i * x_j$ for each edge.
-* Update the weight of each edge $e_{ij}$ by $w_{ij} = w_{ij} + L * (Positive(e_{ij}) - Negative(e_{ij}))$, where $L$ is a learning rate.
+* Take a training example (a set of six movie preferences). Set the states of the visible units to these preferences.
+* Next, update the states of the hidden units using the logistic activation rule described above: for the $j$th hidden unit, compute its activation energy $a_j = \sum_i w_{ij} x_i$, and set $x_j$ to 1 with probability $\sigma(a_j)$ and to 0 with probability $1 - \sigma(a_j)$. Then for each edge $e_{ij}$, compute $Positive(e_{ij}) = x_i * x_j$ (i.e., for each pair of units, measure whether they're both on).
+* Now **reconstruct** the visible units in a similar manner: for each visible unit, compute its activation energy $a_i$, and update its state. Then update the hidden units again, and compute $Negative(e_{ij}) = x_i * x_j$ for each edge.
+* Update the weight of each edge $e_{ij}$ by setting $w_{ij} = w_{ij} + L * (Positive(e_{ij}) - Negative(e_{ij}))$, where $L$ is a learning rate.
 * Repeat over all training examples.
 
-Continue doing this until the network converges (i.e., the error between the training examples and their reconstructions falls below some threshold) or we reach some maximum number of epochs.
+Continue until the network converges (i.e., the error between the training examples and their reconstructions falls below some threshold) or we reach some maximum number of epochs.
 
 Why does this update rule make sense? Note that 
 
-* $Positive(e_{ij})$ measures the association between the $i$th and $j$th unit that we *want* the network to learn from our training examples;
-* $Negative(e_{ij})$ measures the association that the network itself generates (or "daydreams" about) when no units are fixed. 
+* In the first phase, $Positive(e_{ij})$ measures the association between the $i$th and $j$th unit that we *want* the network to learn from our training examples;
+* In the "reconstruction" phase, where the RBM generates the states of visible units based on its hypotheses about the hidden units alone, $Negative(e_{ij})$ measures the association that the network *itself* generates (or "daydreams" about) when no units are fixed to training data. 
 
-So by adding $Positive(e_{ij}) - Negative(e_{ij})$ to each edge weight, we're helping the network's daydreams match the reality of our training examples.
+So by adding $Positive(e_{ij}) - Negative(e_{ij})$ to each edge weight, we're helping the network's daydreams better match the reality of our training examples.
 
-(You may hear this update rule called "contrastive divergence", which is basically a fancy term for "approximate gradient descent".)
+(Sidenote: you may hear this update rule called **contrastive divergence**, which is basically a funky term for "approximate gradient descent".)
 
-# Some Optimizations
+# Examples
 
-The weight-learning algorithm I described above is pretty simple, so let's talk about some modifications that you might see in practice:
+I wrote [a simple RBM implementation](https://github.com/echen/restricted-boltzmann-machines) in Python, so let's use it to walk through some examples.
 
-* Above, $Negative(e_{ij})$ was determined by taking the product of the $i$th and $j$th units after *one* reconstruction. We could also take the product after some larger number of reconstructions (where a reconstruction consists of updating the visible units again, followed by updating the hidden units); this is slower, but describes the network's daydreams more accurately.
-* Instead of using $Positive(e_{ij}))=x_i * x_j$, where $x_i$ and $x_j$ are the binary *states* of the units, we could also let $x_i$ and/or $x_j$ be the activation *probabilities*.
+First, I trained the RBM using some fake data.
+
+* Alice: (Harry Potter = 1, Avatar = 1, LOTR 3 = 1, Gladiator = 0, Titanic = 0, Glitter = 0). Big SF/fantasy fan.
+* Bob: (Harry Potter = 1, Avatar = 0, LOTR 3 = 1, Gladiator = 0, Titanic = 0, Glitter = 0). SF/fantasy fan, but doesn't like Avatar.
+* Carol: (Harry Potter = 1, Avatar = 1, LOTR 3 = 1, Gladiator = 0, Titanic = 0, Glitter = 0). Big SF/fantasy fan.
+* David: (Harry Potter = 0, Avatar = 0, LOTR 3 = 1, Gladiator = 1, Titanic = 1, Glitter = 0). Big Oscar winners fan.
+* Eric:  (Harry Potter = 0, Avatar = 0, LOTR 3 = 1, Gladiator = 1, Titanic = 1, Glitter = 0). Oscar winners fan, except for Titanic.
+* Fred: (Harry Potter = 0, Avatar = 0, LOTR 3 = 1, Gladiator = 1, Titanic = 1, Glitter = 0). Big Oscar winners fan.
+
+The network learned the following weights:
+
+                     Bias Unit       Hidden 1        Hidden 2
+    Bias Unit       -0.08257658     -0.19041546      1.57007782 
+    Harry Potter    -0.82602559     -7.08986885      4.96606654 
+    Avatar          -1.84023877     -5.18354129      2.27197472 
+    LOTR 3           3.92321075      2.51720193      4.11061383 
+    Gladiator        0.10316995      6.74833901     -4.00505343 
+    Titanic         -0.97646029      3.25474524     -5.59606865 
+    Glitter         -4.44685751     -2.81563804     -2.91540988
+
+Note that the first hidden unit seems to correspond to the Oscar winners, and the second hidden units seems to correspond to the SF/fantasy movies, just as we were hoping.
+
+What happens if we give the RBM a new user, George, who has (Harry Potter = 0, Avatar = 0, LOTR 3 = 0, Gladiator = 1, Titanic = 1, Glitter = 0) as his preferences? It turns the Oscar winners unit on (but not the SF/fantasy unit), guessing that George probably likes movies that are Oscar winners.
+
+What happens if we turn only the SF/fantasy unit on, and run the RBM a bunch of different times? It turned on Harry Potter, Avatar, and LOTR 3 three times; it turned on Avatar and LOTR 3, but not Harry Potter, once; and it turned on Harry Potter and LOTR 3, but not Avatar, twice.
+
+# Modifications
+
+I tried to keep the connection-learning algorithm I described above pretty simple, so here are some modifications that often appear in practice:
+
+* Above, $Negative(e_{ij})$ was determined by taking the product of the $i$th and $j$th units after reconstructing the visible units *once* and then updating the hidden units again. We could also take the product after some larger number of reconstructions (i.e., repeat updating the visible units, then the hidden units, then the visible units again, and so on); this is slower, but describes the network's daydreams more accurately.
+* Instead of using $Positive(e_{ij}))=x_i * x_j$, where $x_i$ and $x_j$ are binary 0 or 1 *states*, we could also let $x_i$ and/or $x_j$ be activation *probabilities*. Similarly for $Negative(e_{ij})$.
 * We could penalize larger edge weights, in order to get a sparser or more regularized model.
-* Weight momentum: the weights added to each edge are a weighted sum of the current step as described above (i.e., the $L * (Positive(e_{ij}) - Negative(e_{ij})$ from the current step) and the step previously taken.
-* Batch learning: instead of using only one training example in each epoch, we can use larger batches instead (and only update the network's weights after passing through all the examples in the batch). This can speed up the learning by taking advantage of fast matrix-multiplication algorithms.
+* When updating edge weights, we could use a momentum factor: we would add to each edge a weighted sum of the current step as described above (i.e., $L * (Positive(e_{ij}) - Negative(e_{ij})$) and the step previously taken.
+* Instead of using only one training example in each epoch, we could use *batches* of examples in each epoch, and only update the network's weights after passing through all the examples in the batch. This can speed up the learning by taking advantage of fast matrix-multiplication algorithms.
 
-# Actual Code and Examples
+# Further
 
-Alright, so let's run some actual examples to see how an RBM performs for real. I initialize an RBM class
+If you're interested in learning more about Restricted Boltzmann Machines, here are some good links.
 
-	import numpy as np
-
-	class RBM:
-
-	  def __init__(self, num_visible, num_hidden, learning_rate = 0.1):
-	    self.num_hidden = num_hidden
-	    self.num_visible = num_visible
-	    self.learning_rate = learning_rate
-
-	    # Initialize a weight matrix, of dimensions (num_visible x num_hidden), using
-	    # a Gaussian distribution with mean 0.1.
-	    self.weights = 0.1 * np.random.randn(self.num_visible, self.num_hidden)    
-	    # Insert weights for the bias units into the first row and first column.
-	    self.weights = np.insert(self.weights, 0, 0, axis = 0)
-	    self.weights = np.insert(self.weights, 0, 0, axis = 1)
-
-with 10 visible units and 2 hidden units:
-
-	r = RBM(num_visible = 10, num_hidden = 2)
-
-and train the network using the movie preferences above:
-
-	data = np.array([[1,1,1,1,1,0,0,0,0,0],[0,0,1,0,0,1,1,1,1,0],[1,1,1,1,0,0,0,0,0,0],[0,0,1,0,0,0,1,1,1,0], [0,0,1,0,0,0,1,1,1,0],[1,1,1,1,1,0,0,0,0,0]])
-	r.train(data, max_epochs = 1000)
-
-	def train(self, data, max_epochs = 1000):
-	  """
-	  Train the machine.
-  
-	  Parameters
-	  ----------
-	  data: A matrix where each row is a training example consisting of the states of visible units.    
-	  """
-
-	  num_examples = data.shape[0]
-
-	  # Insert bias units of 1 into the first column.
-	  data = np.insert(data, 0, 1, axis = 1)
-
-	  for epoch in range(max_epochs):      
-	    # Clamp to the data and sample from the hidden units. 
-	    # (This is the "positive CD phase", aka the reality phase.)
-	    pos_hidden_activations = np.dot(data, self.weights)      
-	    pos_hidden_probs = self._logistic(pos_hidden_activations)
-	    pos_hidden_states = pos_hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
-	    # Note that we're using the activation *probabilities* of the hidden states, not the hidden states       
-	    # themselves, when computing associations. We could also use the states; see section 3 of Hinton's 
-	    # "A Practical Guide to Training Restricted Boltzmann Machines" for more.
-	    pos_associations = np.dot(data.T, pos_hidden_probs)
-
-	    # Reconstruct the visible units and sample again from the hidden units.
-	    # (This is the "negative CD phase", aka the daydreaming phase.)
-	    neg_visible_activations = np.dot(pos_hidden_states, self.weights.T)
-	    neg_visible_probs = self._logistic(neg_visible_activations)
-	    neg_visible_probs[:,0] = 1 # Fix the bias unit.
-	    neg_hidden_activations = np.dot(neg_visible_probs, self.weights)
-	    neg_hidden_probs = self._logistic(neg_hidden_activations)
-	    # Note that we're using the activation *probabilities* when computing associations, not the states 
-	    # themselves. We could also use the states; see section 3 of Hinton's "A Practical Guide to Training 
-	    # Restricted Boltzmann Machines" for more.
-	    neg_associations = np.dot(neg_visible_probs.T, neg_hidden_probs)
-
-	    # Update weights.
-	    self.weights += self.learning_rate * ((pos_associations - neg_associations) / num_examples)
-
-	    error = np.sum((data - neg_visible_probs) ** 2)
-	    print "Epoch %s: error is %s\n" % (epoch, error)
-
-Here are the weights learned by the network:
-
-					  Bias Unit	   Hidden 1		Hidden 2
-	Bias Unit	-0.02264486	-0.14238624	 0.39183875 
-	LOTR 1		-2.58092036	 3.92514983	-1.62482845  
-	LOTR 2		-2.42818272  3.94131185	-1.77020683  
-	LOTR 3		 1.99969113  3.63940941	 2.85451444  
-	HP				-2.46372953  3.94422824	-1.7396039  
-	Twilight		-2.10073327  0.85324896	-2.71302185 
-	Titanic		-0.19893787 -3.72986034	-0.49620514 
-	Gladiator	 2.29375224 -4.01030233	 2.03001262 
-	Beaut. Mind	 2.32403228 -4.01407343	 2.00364043 
-	Slumdog		 2.32042494 -4.01066577	 2.00578411 
-	Justin B.	-2.25949729 -3.68399181	-2.50880187
-
-We see that all the SF&F units are connected to the first hidden unit with a positive weight, and all the Oscar winners are connected to the second hidden unit with a positive weight, so our RBM has correctly learned what we were hoping.
-
-And if a new user comes in, who wants to watch all the Oscar winners except LOTR 3, we correctly surmise he likes Oscar winners in general, but not SF&F movies:
-
-	new_user_preferences = np.array([[0,0,0,0,0,1,1,1,1,0]])
-	new_user_hidden_states r.run(new_user_preferences)
-	print new_user_hidden_states # outputs [0 1]
+* [A Practical guide to training restricted Boltzmann machines](http://www.cs.toronto.edu/~hinton/absps/guideTR.pdf), by Geoffrey Hinton
+* A talk by Andrew Ng on [Unsupervised Feature Learning and Deep Learning](http://www.youtube.com/watch?v=ZmNOAtZIgIk)
