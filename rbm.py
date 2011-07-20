@@ -1,7 +1,7 @@
 import numpy as np
 
 class RBM:
-
+  
   def __init__(self, num_visible, num_hidden, learning_rate = 0.1):
     self.num_hidden = num_hidden
     self.num_visible = num_visible
@@ -46,16 +46,15 @@ class RBM:
       neg_visible_probs[:,0] = 1 # Fix the bias unit.
       neg_hidden_activations = np.dot(neg_visible_probs, self.weights)
       neg_hidden_probs = self._logistic(neg_hidden_activations)
-      # Note that we're using the activation *probabilities* when computing associations, not the states 
-      # themselves. We could also use the states; see section 3 of Hinton's "A Practical Guide to Training 
-      # Restricted Boltzmann Machines" for more.
+      # Note, again, that we're using the activation *probabilities* when computing associations, not the states 
+      # themselves.
       neg_associations = np.dot(neg_visible_probs.T, neg_hidden_probs)
 
       # Update weights.
       self.weights += self.learning_rate * ((pos_associations - neg_associations) / num_examples)
 
       error = np.sum((data - neg_visible_probs) ** 2)
-      print "Epoch %s: error is %s\n" % (epoch, error)
+      print "Epoch %s: error is %s" % (epoch, error)
 
   def run_visible(self, data):
     """
@@ -86,7 +85,7 @@ class RBM:
     # Calculate the probabilities of turning the hidden units on.
     hidden_probs = self._logistic(hidden_activations)
     # Turn the hidden units on with their specified probabilities.
-    hidden_states[:,:] = hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
+    hidden_states = hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
     # Always fix the bias unit to 1.
     # hidden_states[:,0] = 1
   
@@ -124,7 +123,7 @@ class RBM:
     # Calculate the probabilities of turning the visible units on.
     visible_probs = self._logistic(visible_activations)
     # Turn the visible units on with their specified probabilities.
-    visible_states[:,:] = visible_probs > np.random.rand(num_examples, self.num_visible + 1)
+    visible_states = visible_probs > np.random.rand(num_examples, self.num_visible + 1)
     # Always fix the bias unit to 1.
     # visible_states[:,0] = 1
 
