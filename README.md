@@ -11,18 +11,15 @@ Next, train the machine:
     
 Finally, run wild!
 
-* Given a new set of visible units, we can see what hidden units are activated.
-
+    # Given a new set of visible units, we can see what hidden units are activated.
     visible_data = np.array([[0,0,0,1,1,0]]) # A matrix with a single row that contains the states of the visible units. (We can also include more rows.)
     r.run_visible(visible_data) # See what hidden units are activated.
-    
-* Given a set of hidden units, we can see what visible units are activated.
 
+    # Given a set of hidden units, we can see what visible units are activated.
     hidden_data = np.array([[1,0]]) # A matrix with a single row that contains the states of the hidden units. (We can also include more rows.)
     r.run_hidden(hidden_data) # See what visible units are activated.
     
-* We can let the network run freely (aka, daydream).
-
+    # We can let the network run freely (aka, daydream).
     r.daydream(100) # Daydream for 100 steps on a single initialization.
 
 # Introduction
