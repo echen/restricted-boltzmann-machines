@@ -85,7 +85,7 @@ class RBM:
     # Calculate the probabilities of turning the hidden units on.
     hidden_probs = self._logistic(hidden_activations)
     # Turn the hidden units on with their specified probabilities.
-    hidden_states = hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
+    hidden_states[:,:] = hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
     # Always fix the bias unit to 1.
     # hidden_states[:,0] = 1
   
@@ -123,7 +123,7 @@ class RBM:
     # Calculate the probabilities of turning the visible units on.
     visible_probs = self._logistic(visible_activations)
     # Turn the visible units on with their specified probabilities.
-    visible_states = visible_probs > np.random.rand(num_examples, self.num_visible + 1)
+    visible_states[:,:] = visible_probs > np.random.rand(num_examples, self.num_visible + 1)
     # Always fix the bias unit to 1.
     # visible_states[:,0] = 1
 
@@ -133,9 +133,10 @@ class RBM:
     
   def daydream(self, num_samples):
     """
-    Randomly initialize the visible units, and start running alternating Gibbs sampling steps
+    Randomly initialize the visible units once, and start running alternating Gibbs sampling steps
     (where each step consists of updating all the hidden units, and then updating all of the visible units),
     taking a sample of the visible units at each step.
+    Note that we only initialize the network *once*, so these samples are correlated.
 
     Returns
     -------
@@ -170,7 +171,8 @@ class RBM:
       # Recalculate the probabilities that the visible units are on.
       visible_activations = np.dot(hidden_states, self.weights.T)
       visible_probs = self._logistic(visible_activations)
-      samples[i,:] = visible_probs
+      visible_states = visible_probs > np.random.rand(self.num_visible + 1)
+      samples[i,:] = visible_states
 
     # Ignore the bias units (the first column), since they're always set to 1.
     return samples[:,1:]        
@@ -185,4 +187,3 @@ if __name__ == '__main__':
   print r.weights
   user = np.array([[0,0,0,1,1,0]])
   print r.run_visible(user)
-  print r.daydream(3)

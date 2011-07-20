@@ -21,7 +21,10 @@ Finally, run wild!
     hidden_data = np.array([[1,0]]) # A matrix with a single row that contains the states of the hidden units. (We can also include more rows.)
     r.run_hidden(hidden_data) # See what visible units are activated.
     
-* 
+* We can let the network run freely (aka, daydream).
+
+    r.daydream(100) # Daydream for 100 steps on a single initialization.
+
 # Introduction
 
 Suppose you ask a bunch of users to rate a set of movies on a 0-100 scale. In classical [factor analysis](http://en.wikipedia.org/wiki/Factor_analysis), you could then try to explain each movie and user in terms of a set of latent *factors*. For example, movies like Star Wars and Lord of the Rings might have strong associations with a latent science fiction and fantasy factor, and users who like Wall-E and Toy Story might have strong associations with a latent Pixar factor.
