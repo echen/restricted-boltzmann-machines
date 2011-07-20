@@ -185,3 +185,4 @@ if __name__ == '__main__':
   print r.weights
   user = np.array([[0,0,0,1,1,0]])
   print r.run_visible(user)
+  print r.daydream(3)
