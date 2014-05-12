@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 
 class RBM:
@@ -54,7 +55,7 @@ class RBM:
       self.weights += self.learning_rate * ((pos_associations - neg_associations) / num_examples)
 
       error = np.sum((data - neg_visible_probs) ** 2)
-      print "Epoch %s: error is %s" % (epoch, error)
+      print("Epoch %s: error is %s" % (epoch, error))
 
   def run_visible(self, data):
     """
@@ -184,6 +185,7 @@ if __name__ == '__main__':
   r = RBM(num_visible = 6, num_hidden = 2)
   training_data = np.array([[1,1,1,0,0,0],[1,0,1,0,0,0],[1,1,1,0,0,0],[0,0,1,1,1,0], [0,0,1,1,0,0],[0,0,1,1,1,0]])
   r.train(training_data, max_epochs = 5000)
-  print r.weights
+  print(r.weights)
   user = np.array([[0,0,0,1,1,0]])
-  print r.run_visible(user)
+  print(r.run_visible(user))
+
