@@ -3,10 +3,9 @@ import numpy as np
 
 class RBM:
   
-  def __init__(self, num_visible, num_hidden, learning_rate = 0.1):
+  def __init__(self, num_visible, num_hidden):
     self.num_hidden = num_hidden
     self.num_visible = num_visible
-    self.learning_rate = learning_rate
     self.debug_print = True
 
     # Initialize a weight matrix, of dimensions (num_visible x num_hidden), using
@@ -16,7 +15,7 @@ class RBM:
     self.weights = np.insert(self.weights, 0, 0, axis = 0)
     self.weights = np.insert(self.weights, 0, 0, axis = 1)
 
-  def train(self, data, max_epochs = 1000):
+  def train(self, data, max_epochs = 1000, learning_rate = 0.1):
     """
     Train the machine.
 
@@ -53,7 +52,7 @@ class RBM:
       neg_associations = np.dot(neg_visible_probs.T, neg_hidden_probs)
 
       # Update weights.
-      self.weights += self.learning_rate * ((pos_associations - neg_associations) / num_examples)
+      self.weights += learning_rate * ((pos_associations - neg_associations) / num_examples)
 
       error = np.sum((data - neg_visible_probs) ** 2)
       if self.debug_print:
