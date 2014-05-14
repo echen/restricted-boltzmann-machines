@@ -7,6 +7,7 @@ class RBM:
     self.num_hidden = num_hidden
     self.num_visible = num_visible
     self.learning_rate = learning_rate
+    self.debug_print = True
 
     # Initialize a weight matrix, of dimensions (num_visible x num_hidden), using
     # a Gaussian distribution with mean 0 and standard deviation 0.1.
@@ -55,7 +56,8 @@ class RBM:
       self.weights += self.learning_rate * ((pos_associations - neg_associations) / num_examples)
 
       error = np.sum((data - neg_visible_probs) ** 2)
-      print("Epoch %s: error is %s" % (epoch, error))
+      if self.debug_print:
+        print("Epoch %s: error is %s" % (epoch, error))
 
   def run_visible(self, data):
     """
