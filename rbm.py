@@ -9,7 +9,12 @@ class RBM:
     self.learning_rate = learning_rate
 
     # Initialize a weight matrix, of dimensions (num_visible x num_hidden), using
-    # a Gaussian distribution with mean 0 and standard deviation 0.1.
+    # a uniform distribution between -0.1 * sqrt(6. / (num_hidden + num_visible))
+    # and -0.1 * sqrt(6. / (num_hidden + num_visible)). One could vary the 
+    # standard deviation by multiplying the interval with appropriate value.
+    # Here we initialize the weights with mean 0 and standard deviation 0.1. 
+    # Reference: Understanding the difficulty of training deep feedforward 
+    # neural networks by Xavier Glorot and Yoshua Bengio
     np_rng = np.random.RandomState(1234)
 
     self.weights = np.asarray(np_rng.uniform(
