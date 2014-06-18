@@ -23,7 +23,6 @@ class RBM:
                        	size=(num_visible, num_hidden)))
 
 
-    #self.weights = 0.1 * np.random.randn(self.num_visible, self.num_hidden)    
     # Insert weights for the bias units into the first row and first column.
     self.weights = np.insert(self.weights, 0, 0, axis = 0)
     self.weights = np.insert(self.weights, 0, 0, axis = 1)
