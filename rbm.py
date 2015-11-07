@@ -13,7 +13,7 @@ class RBM:
     self.weights = 0.1 * np.random.randn(self.num_visible, self.num_hidden)    
     # Insert weights for the bias units into the first row and first column.
     self.weights = np.insert(self.weights, 0, 0, axis = 0)
-    self.weights = np.insert(self.weights, 0, 0, axis = 1)
+#    self.weights = np.insert(self.weights, 0, 0, axis = 1)
 
   def train(self, data, max_epochs = 1000):
     """
@@ -34,7 +34,7 @@ class RBM:
       # (This is the "positive CD phase", aka the reality phase.)
       pos_hidden_activations = np.dot(data, self.weights)      
       pos_hidden_probs = self._logistic(pos_hidden_activations)
-      pos_hidden_states = pos_hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
+      pos_hidden_states = pos_hidden_probs > np.random.rand(num_examples, self.num_hidden)
       # Note that we're using the activation *probabilities* of the hidden states, not the hidden states       
       # themselves, when computing associations. We could also use the states; see section 3 of Hinton's 
       # "A Practical Guide to Training Restricted Boltzmann Machines" for more.
@@ -44,6 +44,7 @@ class RBM:
       # (This is the "negative CD phase", aka the daydreaming phase.)
       neg_visible_activations = np.dot(pos_hidden_states, self.weights.T)
       neg_visible_probs = self._logistic(neg_visible_activations)
+#      neg_visible_states = neg_visible_probs > np.random.rand(num_examples, self.num_visible + 1)
       neg_visible_probs[:,0] = 1 # Fix the bias unit.
       neg_hidden_activations = np.dot(neg_visible_probs, self.weights)
       neg_hidden_probs = self._logistic(neg_hidden_activations)
@@ -76,7 +77,7 @@ class RBM:
     
     # Create a matrix, where each row is to be the hidden units (plus a bias unit)
     # sampled from a training example.
-    hidden_states = np.ones((num_examples, self.num_hidden + 1))
+    hidden_states = np.ones((num_examples, self.num_hidden))
     
     # Insert bias units of 1 into the first column of data.
     data = np.insert(data, 0, 1, axis = 1)
@@ -86,7 +87,7 @@ class RBM:
     # Calculate the probabilities of turning the hidden units on.
     hidden_probs = self._logistic(hidden_activations)
     # Turn the hidden units on with their specified probabilities.
-    hidden_states[:,:] = hidden_probs > np.random.rand(num_examples, self.num_hidden + 1)
+    hidden_states[:,:] = hidden_probs > np.random.rand(num_examples, self.num_hidden)
     # Always fix the bias unit to 1.
     # hidden_states[:,0] = 1
   
