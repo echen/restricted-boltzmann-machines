@@ -19,8 +19,8 @@ def output_array(a):
 def main():
     if len(sys.argv)<3 or sys.argv[1] == "--help":
         print("Usage: rbmcmd statefile command parameters...")
-        print("    rbmcmd statefile init num_visible num_hidden learning_rate")
-        print("    rbmcmd statefile train max_epochs < whitespace-separated lines of num_visible numbers 0 or 1.")
+        print("    rbmcmd statefile init num_visible num_hidden")
+        print("    rbmcmd statefile train max_epochs learning_rate < whitespace-separated lines of num_visible numbers 0 or 1.")
         print("    rbmcmd statefile run_visible < whitespace-separated lines of num_visible numbers > whitespace-separated lines of num_hidden numbers")
         print("    rbmcmd statefile run_hidden < whitespace-separated lines of num_hidden numbers > whitespace-separated lines of num_visible numbers")
         print("    rbmcmd statefile daydream_trace num_samples > num_samples whitespace-separted lines of num_visible numbers")
@@ -37,7 +37,7 @@ def main():
     
 
     if   cmd == "init":
-        r = rbm.RBM(num_visible = int(sys.argv[3]), num_hidden = int(sys.argv[4]), learning_rate = float(sys.argv[5]))
+        r = rbm.RBM(num_visible = int(sys.argv[3]), num_hidden = int(sys.argv[4]))
         r.debug_print = False
     elif cmd == "train" or cmd=="run_visible" or cmd=="run_hidden":
         maxchunk=1000
@@ -54,7 +54,8 @@ def main():
 
             if cmd == "train":
                 max_epochs = int(sys.argv[3])
-                r.train(numpy.array(incoming_data), max_epochs=max_epochs)
+                learning_rate = float(sys.argv[4])
+                r.train(numpy.array(incoming_data), max_epochs=max_epochs, learning_rate=learning_rate)
             elif cmd == "run_visible":
                 hidden_states = r.run_visible(numpy.array(incoming_data))
                 for i in hidden_states:
