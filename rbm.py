@@ -13,7 +13,6 @@ class RBM:
     self.weights = 0.1 * np.random.randn(self.num_visible, self.num_hidden)    
     # Insert weights for the bias units into the first row and first column.
     self.weights = np.insert(self.weights, 0, 0, axis = 0)
-#    self.weights = np.insert(self.weights, 0, 0, axis = 1)
 
   def train(self, data, max_epochs = 1000):
     """
@@ -44,7 +43,7 @@ class RBM:
       # (This is the "negative CD phase", aka the daydreaming phase.)
       neg_visible_activations = np.dot(pos_hidden_states, self.weights.T)
       neg_visible_probs = self._logistic(neg_visible_activations)
-#      neg_visible_states = neg_visible_probs > np.random.rand(num_examples, self.num_visible + 1)
+      neg_visible_states = neg_visible_probs > np.random.rand(num_examples, self.num_visible + 1)
       neg_visible_probs[:,0] = 1 # Fix the bias unit.
       neg_hidden_activations = np.dot(neg_visible_probs, self.weights)
       neg_hidden_probs = self._logistic(neg_hidden_activations)
