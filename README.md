@@ -117,6 +117,55 @@ I tried to keep the connection-learning algorithm I described above pretty simpl
 * When updating edge weights, we could use a momentum factor: we would add to each edge a weighted sum of the current step as described above (i.e., $L * (Positive(e_{ij}) - Negative(e_{ij})$) and the step previously taken.
 * Instead of using only one training example in each epoch, we could use *batches* of examples in each epoch, and only update the network's weights after passing through all the examples in the batch. This can speed up the learning by taking advantage of fast matrix-multiplication algorithms.
 
+# rbmcmd
+
+There is command-line tool to train and run RBM.
+
+Here is the code that corresponds to the first example from "How to use" section
+
+
+```
+# First, initialize an RBM with the desired number of visible and hidden units.
+./rbmcmd rbmstate.dat init  6  2  0.1
+
+# Next, train the machine:
+./rbmcmd rbmstate.dat train 5000 << \EOF
+1 1 1 0 0 0
+1 0 1 0 0 0
+1 1 1 0 0 0
+0 0 1 1 1 0
+0 0 1 1 0 0
+0 0 1 1 1 0
+EOF
+
+# Finally, run wild
+# Given a new set of visible units, we can see what hidden units are activated.
+echo "0 0 0 1 1 0" | ./rbmcmd rbmstate.dat run_visible
+# 1 0
+
+# Given a set of hidden units, we can see what visible units are activated.
+echo "1 0" | ./rbmcmd rbmstate.dat run_hidden
+# 0 1 1 1 0 0
+
+# We can let the network run freely (aka, daydream).
+# Daydream for 3 steps on a single initialization.
+./rbmcmd rbmstate.dat daydream_trace 3 
+# 0.901633539115 0.718084610948 0.00650400574634 0.853636318291 0.938241835347 0.0747538486547 
+# 1.0 1.0 1.0 0.0 0.0 0.0 
+# 1.0 1.0 1.0 0.0 0.0 0.0 
+
+
+# See 5 dreams, each of 2 step from random data
+./rbmcmd rbmstate.dat daydream 3 5
+# 1 1 1 0 0 0 
+# 0 0 1 1 0 0 
+# 1 0 1 0 0 0 
+# 1 0 1 0 0 0 
+# 1 1 1 0 0 0 
+
+```
+
+
 # Further
 
 If you're interested in learning more about Restricted Boltzmann Machines, here are some good links.
