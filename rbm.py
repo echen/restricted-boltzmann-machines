@@ -9,8 +9,20 @@ class RBM:
     self.debug_print = True
 
     # Initialize a weight matrix, of dimensions (num_visible x num_hidden), using
-    # a Gaussian distribution with mean 0 and standard deviation 0.1.
-    self.weights = 0.1 * np.random.randn(self.num_visible, self.num_hidden)    
+    # a uniform distribution between -sqrt(6. / (num_hidden + num_visible))
+    # and sqrt(6. / (num_hidden + num_visible)). One could vary the 
+    # standard deviation by multiplying the interval with appropriate value.
+    # Here we initialize the weights with mean 0 and standard deviation 0.1. 
+    # Reference: Understanding the difficulty of training deep feedforward 
+    # neural networks by Xavier Glorot and Yoshua Bengio
+    np_rng = np.random.RandomState(1234)
+
+    self.weights = np.asarray(np_rng.uniform(
+			low=-0.1 * np.sqrt(6. / (num_hidden + num_visible)),
+                       	high=0.1 * np.sqrt(6. / (num_hidden + num_visible)),
+                       	size=(num_visible, num_hidden)))
+
+
     # Insert weights for the bias units into the first row and first column.
     self.weights = np.insert(self.weights, 0, 0, axis = 0)
     self.weights = np.insert(self.weights, 0, 0, axis = 1)
